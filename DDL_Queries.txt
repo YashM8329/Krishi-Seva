@@ -1,0 +1,227 @@
+									SQL Queries
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+									  Farmers
+
+
+Q1. What government schemes am I eligible for?
+
+SELECT i.Farmer_Aadhar, i.Name, i.Contact, i.FarmingLandArea, i.State, j.SchemeName
+FROM Farmers AS i CROSS JOIN GovernmentSchemes AS j 
+WHERE (j.MaxLandArea >= i.FarmingLandArea OR j.MaxLandArea IS NULL) AND (j.State = i.State OR j.State IS NULL)
+AND i.Farmer_Aadhar = 234567890123;
+
+Q2. What is my Credit Score for all my fields?
+
+SELECT j.Farmer_Aadhar, j.Name, i.CropName, i.BankName, i.AccountNumber, i.CIBIL 
+FROM FarmingLand AS i NATURAL JOIN Farmers AS j 
+WHERE j.Farmer_Aadhar = 301234567811;
+
+Q3. Are there any traders who trades in my crop in my area?
+
+i) Trader is in the same state - 
+
+SELECT j.Farmer_Aadhar, j.Name, i.CropName, K.Trader_Aadhar, k.Name, k.Price
+FROM FarmingLand AS i NATURAL JOIN Farmers AS j CROSS JOIN Traders AS k
+WHERE k.State = j.State AND k.CropName = i.CropName AND 
+i.CropName = 'Rice' AND j.Farmer_Aadhar = 121234567893;
+
+ii) Trader is in the same city - 
+
+SELECT j.Farmer_Aadhar, j.Name, i.CropName, K.Trader_Aadhar, k.Name, k.Price
+FROM FarmingLand AS i NATURAL JOIN Farmers AS j CROSS JOIN Traders AS k
+WHERE k.City = j.City AND k.State = j.State AND k.CropName = i.CropName AND 
+i.CropName = 'Rice' AND j.Farmer_Aadhar = 121234567893;
+
+Q4. What is my overall profit on a particular crop?
+
+(SELECT i.Farmer_Aadhar, i.Quantity, i.SelfExpenditure, k.Price, i.BankName, i.LoanTaken, j.InterestRate - 2 AS FinalInterest,
+k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate-2)/100) AS Profit
+FROM FarmingLand AS i NATURAL JOIN Banks AS j NATURAL JOIN Traders AS k
+WHERE i.Membership = 'Diamond' AND i.Farmer_Aadhar = 234567890123 AND i.CropName = 'Rice')
+UNION
+(SELECT i.Farmer_Aadhar, i.Quantity, i.SelfExpenditure, k.Price, i.BankName, i.LoanTaken, j.InterestRate AS FinalInterest,
+k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate)/100) AS Profit	
+FROM FarmingLand AS i NATURAL JOIN Banks AS j NATURAL JOIN Traders AS k
+WHERE (i.Membership != 'Diamond' OR i.Membership IS NULL) AND i.Farmer_Aadhar = 234567890123 AND i.CropName = 'Rice');
+
+Q5. What is my projected loan and projected CIBIL Score for the upcoming year?
+
+(SELECT i.Farmer_Aadhar, i.Quantity, i.SelfExpenditure, k.Price, i.BankName, i.LoanTaken, j.InterestRate - 2 AS FinalInterest,
+k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate-2)/100) AS Profit, l.HarvestTime,
+(k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate-2)/100)) * 12/l.HarvestTime AS AnnualProfit,
+((k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate-2)/100)) * 12/l.HarvestTime)/200 + i.MaxLoanAmt AS ProjectedLoanAmount,
+((k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate-2)/100)) * 12/l.HarvestTime)/150000 + i.CIBIL AS ProjectedCIBIL
+FROM FarmingLand AS i NATURAL JOIN Banks AS j NATURAL JOIN Traders AS k NATURAL JOIN Crops AS l
+WHERE i.Membership = 'Diamond' AND i.Farmer_Aadhar = 123456789012 AND i.CropName = 'Wheat')
+UNION
+(SELECT i.Farmer_Aadhar, i.Quantity, i.SelfExpenditure, k.Price, i.BankName, i.LoanTaken, j.InterestRate AS FinalInterest,
+k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate)/100) AS Profit, l.HarvestTime,
+(k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate)/100)) * 12/l.HarvestTime AS AnnualProfit,
+((k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate)/100)) * 12/l.HarvestTime)/200 + i.MaxLoanAmt AS ProjectedLoanAmount,
+((k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate)/100)) * 12/l.HarvestTime)/150000 + i.CIBIL AS ProjectedCIBIL
+FROM FarmingLand AS i NATURAL JOIN Banks AS j NATURAL JOIN Traders AS k NATURAL JOIN Crops AS l
+WHERE (i.Membership != 'Diamond' OR i.Membership IS NULL) AND i.Farmer_Aadhar = 123456789012 AND i.CropName = 'Wheat');
+
+Q6. Which workers can I hire for a particular job occupation?
+
+SELECT k.Farmer_Aadhar, j.Worker_Aadhar, j.Name, j.Gender, Age(Current_Date, j.DOB) AS Age, i.Occupation, j.Contact
+FROM WorkerJobs AS i NATURAL JOIN Workers AS j CROSS JOIN Farmers AS k
+WHERE k.City = j.City AND k.State = j.State AND i.Occupation = 'Weed remover' AND k.Farmer_Aadhar = 291234567810;
+
+Q7. What is the total money I spent on worker's wages?
+
+i) List of Individual wage payment
+
+SELECT i.CropName, i.DayCount, k.DailyWage, i.DayCount * k.DailyWage AS TotalWage
+FROM WorkingLogs AS i NATURAL JOIN WorkerJobs AS j NATURAL JOIN Occupations AS k 
+WHERE i.Farmer_Aadhar = 456789012345;
+
+ii) List of payment according to the occupations
+
+SELECT i.CropName, SUM(i.DayCount * k.DailyWage) AS TotalWage
+FROM WorkingLogs AS i NATURAL JOIN WorkerJobs AS j NATURAL JOIN Occupations AS k 
+WHERE i.Farmer_Aadhar = 456789012345
+GROUP BY i.CropName
+ORDER BY TotalWage DESC;
+
+
+------------------------------------x-------------------------------------x--------------------------------------x-----------------------------------------
+
+
+								     Government Officials
+
+
+Q1. What were the top 10 farms based on annual profit in the previous year?
+
+((SELECT i.Farmer_Aadhar, i.BankName, i.LoanTaken, j.InterestRate - 2 AS FinalInterest,
+k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate-2)/100) AS Profit, l.HarvestTime,
+(k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate-2)/100)) * 12/l.HarvestTime AS AnnualProfit
+FROM FarmingLand AS i NATURAL JOIN Banks AS j NATURAL JOIN Traders AS k NATURAL JOIN Crops AS l
+WHERE i.Membership = 'Diamond')
+UNION
+(SELECT i.Farmer_Aadhar, i.BankName, i.LoanTaken, j.InterestRate AS FinalInterest,
+k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate)/100) AS Profit, l.HarvestTime,
+(k.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (j.InterestRate)/100)) * 12/l.HarvestTime AS AnnualProfit
+FROM FarmingLand AS i NATURAL JOIN Banks AS j NATURAL JOIN Traders AS k NATURAL JOIN Crops AS l
+WHERE (i.Membership != 'Diamond' OR i.Membership IS NULL)))
+ORDER BY AnnualProfit DESC LIMIT 10;
+
+Q2. Were the Government aids provided used judicially?
+
+((SELECT i.Farmer_Aadhar, i.BankName, i.LoanTaken, l.InterestRate - 2 AS FinalInterest,
+n.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (l.InterestRate-2)/100) AS Profit,
+(n.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (l.InterestRate-2)/100)) * 12/m.HarvestTime AS AnnualProfit,
+((n.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (l.InterestRate-2)/100)) * 12/m.HarvestTime)/k.YearlyMonetaryAid AS PerformanceRatio
+FROM FarmingLand AS i NATURAL JOIN Farmers AS j JOIN GovernmentSchemes AS k ON (j.SchemeName = k.SchemeName) 
+NATURAL JOIN Banks AS l NATURAL JOIN Crops AS m JOIN Traders AS n ON (i.Trader_Aadhar = n.Trader_Aadhar)
+WHERE i.Membership = 'Diamond')
+UNION
+(SELECT i.Farmer_Aadhar, i.BankName, i.LoanTaken, l.InterestRate AS FinalInterest,
+n.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (l.InterestRate)/100) AS Profit,
+(n.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (l.InterestRate)/100)) * 12/m.HarvestTime AS AnnualProfit,
+((n.Price*i.Quantity - i.SelfExpenditure - i.LoanTaken*(1 + (l.InterestRate)/100)) * 12/m.HarvestTime)/k.YearlyMonetaryAid AS PerformanceRatio
+FROM FarmingLand AS i NATURAL JOIN Farmers AS j JOIN GovernmentSchemes AS k ON (j.SchemeName = k.SchemeName) 
+NATURAL JOIN Banks AS l NATURAL JOIN Crops AS m JOIN Traders AS n ON (i.Trader_Aadhar = n.Trader_Aadhar)
+WHERE (i.Membership != 'Diamond' OR i.Membership IS NULL)))
+ORDER BY PerformanceRatio DESC;
+
+Q3. Which farmers are eligible for a particular government scheme?
+
+SELECT j.SchemeName, i.Farmer_Aadhar, i.Name, i.Contact, i.FarmingLandArea, i.State
+FROM Farmers AS i CROSS JOIN GovernmentSchemes AS j 
+WHERE (j.MaxLandArea >= i.FarmingLandArea OR j.MaxLandArea IS NULL) AND (j.State = i.State OR j.State IS NULL)
+AND j.SchemeName = 'Pradhan Mantri Kisan MaanDhan Yojana (PM-KMY)';
+
+Q4. Which region have the most active traders?
+
+i) Traders in the same state - 
+
+SELECT j.State, Count(k.Trader_Aadhar) AS TraderCount FROM FarmingLand AS i NATURAL JOIN Farmers AS j JOIN Traders AS k ON (i.Trader_Aadhar = k.Trader_Aadhar)
+GROUP BY j.State ORDER BY TraderCount DESC;
+
+ii) Traders in the same city - 
+
+SELECT j.City, Count(k.Trader_Aadhar) AS TraderCount FROM FarmingLand AS i NATURAL JOIN Farmers AS j JOIN Traders AS k ON (i.Trader_Aadhar = k.Trader_Aadhar)
+GROUP BY j.City ORDER BY TraderCount DESC;
+
+
+------------------------------------x-------------------------------------x--------------------------------------x------------------------------------------
+
+
+									 Workers 
+
+
+Q1. What farms are available in my area?
+
+SELECT k.Worker_Aadhar, j.Farmer_Aadhar, i.CropName, k.City, k.State, j.Contact
+FROM FarmingLand AS i NATURAL JOIN Farmers AS j CROSS JOIN Workers AS k
+WHERE k.City = j.City AND k.State = j.State AND k.Worker_Aadhar = 268370229092;
+
+Q2. What are my total earnings?
+
+i) List of earnings of every job
+
+SELECT k.Worker_Aadhar, k.Name, j.Occupation, i.Farmer_Aadhar, i.CropName, i.DayCount, l.DailyWage, i.DayCount*l.DailyWage AS Earning
+FROM WorkingLogs AS i NATURAL JOIN WorkerJobs AS j NATURAL JOIN Workers AS k NATURAL JOIN Occupations AS l
+WHERE k.Worker_Aadhar = 268370122095;
+
+ii) Sum of Earnings from an occupation
+
+SELECT j.Occupation, SUM(i.DayCount*l.DailyWage) AS Earning
+FROM WorkingLogs AS i NATURAL JOIN WorkerJobs AS j NATURAL JOIN Workers AS k NATURAL JOIN Occupations AS l
+WHERE k.Worker_Aadhar = 268370122095
+GROUP BY j.Occupation;
+
+
+------------------------------------x-------------------------------------x--------------------------------------x------------------------------------------
+
+
+									Banks
+
+
+Q1. What are the personal details of the farmers, to figure out their CIBIL Scores?
+
+SELECT distinct j.BankName, i.Farmer_Aadhar, k.Name, k.Gender, l.Name, l.Gender, Age(Current_Date, l.DOB) AS Age FROM 
+FarmingLand AS i NATURAL JOIN Banks AS j JOIN Farmers AS k 
+ON (i.Farmer_Aadhar = k.Farmer_Aadhar) JOIN Dependents AS l ON (l.Farmer_Aadhar = k.Farmer_Aadhar)
+WHERE j.BankName = 'ICICI Bank';
+
+
+------------------------------------x-------------------------------------x--------------------------------------x------------------------------------------
+
+
+									Traders
+
+
+Q1. Which farmers harvest the crops I trade in?
+
+i) Location doesn't matter
+
+SELECT k.Trader_Aadhar, k.CropName, i.Farmer_Aadhar, j.Name, j.Contact, j.City, j.State, i.Quantity FROM
+FarmingLand AS i NATURAL JOIN Farmers AS j CROSS JOIN Traders AS k
+WHERE k.Trader_Aadhar = 901210987654 AND k.CropName = i.CropName;
+
+ii) The State should be same
+
+SELECT k.Trader_Aadhar, k.CropName, i.Farmer_Aadhar, j.Name, j.Contact, j.City, i.Quantity FROM
+FarmingLand AS i NATURAL JOIN Farmers AS j CROSS JOIN Traders AS k
+WHERE k.Trader_Aadhar = 901210987654 AND k.CropName = i.CropName AND k.State = j.State;
+
+Q2. Which farmers are not currently associated with a trader?
+
+SELECT i.Farmer_Aadhar, j.Name, i.CropName, j.Contact, j.City, j.State, i.Quantity FROM
+FarmingLand AS i NATURAL JOIN Farmers AS j
+WHERE i.Trader_Aadhar IS NULL;
+
+Q3. Are there Labour class workers in my region?
+
+SELECT k.Trader_Aadhar, k.Name, j.Worker_Aadhar, j.Name FROM 
+WorkerJobs AS i NATURAL JOIN Workers AS j CROSS JOIN Traders AS k
+WHERE k.Trader_Aadhar = 121098763215 AND k.City = j.City AND k.State = j.State AND i.Occupation = 'Labour';
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+
