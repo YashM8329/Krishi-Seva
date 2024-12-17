@@ -1,0 +1,143 @@
+									Creating Tables
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+CREATE SCHEMA T_407;
+SET SEARCH_PATH TO T_407;
+
+CREATE TABLE Crops(
+	CropName varchar(30) PRIMARY KEY,
+	HarvestTime integer not null
+);
+
+CREATE TABLE Banks(
+	BankName varchar(30) PRIMARY KEY,
+	InterestRate decimal(4, 2) not null
+);
+
+CREATE TABLE GovernmentSchemes(
+	SchemeName varchar(50) PRIMARY KEY,
+	State varchar(30),
+	MaxLandArea integer,
+	YearlyMonetaryAid integer not null
+);
+
+CREATE TABLE Workers(
+	Worker_Aadhar numeric(12, 0) PRIMARY KEY,
+	Name varchar(30) not null,
+	Gender char(1) not null,
+	DOB DATE not null,
+	Contact numeric(10, 0) not null UNIQUE,
+	City varchar(30) not null,
+	State varchar(30) not null
+);
+
+CREATE TABLE Traders(
+	Trader_Aadhar numeric(12, 0) PRIMARY KEY,
+	Name varchar(30) not null,
+	Gender char(1) not null,
+	DOB DATE not null,
+	Contact numeric(10, 0) not null UNIQUE,
+	CropName varchar(30) not null,
+	Price integer not null,
+	City varchar(30) not null,
+	State varchar(30) not null
+);
+
+CREATE TABLE Occupations(
+	Occupation varchar(30) PRIMARY KEY,
+	DailyWage integer not null
+);
+
+CREATE TABLE Farmers(
+	Farmer_Aadhar numeric(12, 0) PRIMARY KEY,
+	Name varchar(30) not null,
+	Gender char(1) not null,
+	DOB DATE not null,
+	Contact numeric(10, 0) not null UNIQUE,
+	RationNumber numeric(10, 0) not null UNIQUE,
+	KhasraCertified varchar(3) not null,
+	FarmingLandArea integer not null,
+	City varchar(30) not null,
+	State varchar(30) not null,
+	SchemeName varchar(50),
+	
+	CONSTRAINT FK FOREIGN KEY (SchemeName) REFERENCES GovernmentSchemes (SchemeName)
+	ON UPDATE CASCADE ON DELETE SET NULL
+);
+
+CREATE TABLE Dependents(
+	Farmer_Aadhar numeric(12, 0) not null,
+	Name varchar(30) not null,
+	Gender char(1) not null,
+	DOB DATE not null,
+	
+	PRIMARY KEY (Farmer_Aadhar, Name),
+	CONSTRAINT FK FOREIGN KEY (Farmer_Aadhar) REFERENCES Farmers (Farmer_Aadhar)
+	ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE TABLE WorkerJobs(
+	Worker_Aadhar numeric(12, 0) not null,
+	Occupation  varchar(30) not null,
+	
+	PRIMARY KEY (Worker_Aadhar, Occupation),
+	
+	CONSTRAINT FK1 FOREIGN KEY (Worker_Aadhar) REFERENCES Workers (Worker_Aadhar)
+	ON UPDATE CASCADE ON DELETE CASCADE,
+
+	CONSTRAINT FK2 FOREIGN KEY (Occupation) REFERENCES Occupations (Occupation)
+	ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE TABLE FarmingLand(
+	Farmer_Aadhar numeric(12, 0) not null,
+	CropName varchar(30) not null,
+	Quantity integer not null,
+	SelfExpenditure integer not null,
+	Trader_Aadhar numeric(12, 0),
+	BankName varchar(30) not null,
+	AccountNumber numeric(16, 0) not null UNIQUE,
+	CIBIL numeric(3, 0) not null,
+	MaxLoanAmt integer not null,
+	LoanTaken integer not null,
+	Membership varchar(10),
+	
+	PRIMARY KEY (Farmer_Aadhar, CropName),
+	
+	CONSTRAINT FK1 FOREIGN KEY (Trader_Aadhar) REFERENCES Traders (Trader_Aadhar)
+	ON UPDATE CASCADE ON DELETE SET NULL,
+	
+	CONSTRAINT FK2 FOREIGN KEY (BankName) REFERENCES Banks (BankName)
+	ON UPDATE CASCADE ON DELETE CASCADE,
+	
+	CONSTRAINT FK3 FOREIGN KEY (Farmer_Aadhar) REFERENCES Farmers (Farmer_Aadhar)
+	ON UPDATE CASCADE ON DELETE CASCADE,
+	
+	CONSTRAINT FK4 FOREIGN KEY (CropName) REFERENCES Crops (CropName)
+	ON UPDATE CASCADE ON DELETE CASCADE,
+
+	CONSTRAINT LoanCheck CHECK (MaxLoanAmt >= LoanTaken),
+
+	CONSTRAINT CIBIL_Eligible CHECK (CIBIL >=300 AND CIBIL <= 900)
+);
+
+CREATE TABLE WorkingLogs(
+	Worker_Aadhar numeric(12, 0) not null,
+	Occupation varchar(30) not null,
+	Farmer_Aadhar numeric(12, 0) not null,
+	CropName varchar(30) not null,
+	DayCount integer not null,
+	
+	PRIMARY KEY (Worker_Aadhar, Occupation, Farmer_Aadhar, CropName),
+	
+	CONSTRAINT FK1 FOREIGN KEY (Worker_Aadhar, Occupation) REFERENCES WorkerJobs (Worker_Aadhar, Occupation)
+	ON UPDATE CASCADE ON DELETE CASCADE,
+	
+	CONSTRAINT FK2 FOREIGN KEY (Farmer_Aadhar, CropName) REFERENCES FarmingLand (Farmer_Aadhar, CropName)
+	ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
